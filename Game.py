@@ -15,18 +15,18 @@ pygame.display.set_caption('Flappy Bird')
 relogio = pygame.time.Clock()
 
 # Carregando imagens e fundo
-personagem = pygame.image.load('personagem.jpg')
+personagem = pygame.image.load('personagem.png')
 # aumentar o personagem 3x
 pw, ph = personagem.get_size()
 personagem = pygame.transform.scale(personagem, (pw * 3, ph * 3))
 
-obstaculo_img = pygame.image.load('obstaculo.jpg')
+obstaculo_img = pygame.image.load('obstaculo.png')
 # diminui o obstaculo pela metade
 obstaculo_img = pygame.transform.scale(obstaculo_img, (60, int(altura_tela * 0.75)))
 
 # vi que era melhor usar try. deixa assim klein; Carrega a imagem de fundo
 try:
-    fundo = pygame.image.load('fundo.jpg')
+    fundo = pygame.image.load('fundo.png')
     fundo = pygame.transform.scale(fundo, (largura_tela, altura_tela))
 except Exception:
     fundo = pygame.Surface((largura_tela, altura_tela))
