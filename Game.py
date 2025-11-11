@@ -4,6 +4,16 @@ import sys
 import random
 # Inicializando o Pygame
 pygame.init()
+pygame.mixer.init()
+
+# Carregando sons
+som_pulo = pygame.mixer.Sound('pulo.mp3')
+som_colisao = pygame.mixer.Sound('tronco.mp3')
+musica_fundo = 'musica fundo.mp3'
+pygame.mixer.music.load(musica_fundo)
+pygame.mixer.music.set_volume(0.5)
+pygame.mixer.music.play(-1)
+
 
 # Configurando a tela
 largura_tela = 800
@@ -30,7 +40,19 @@ try:
     fundo = pygame.transform.scale(fundo, (largura_tela, altura_tela))
 except Exception:
     fundo = pygame.Surface((largura_tela, altura_tela))
-    fundo.fill((0, 150, 255))  # cor azul 
+    fundo.fill((0, 150, 255))  # cor azul
+
+# imagens para o menu e instruções
+fundo_menu = pygame.image.load('fundo2.jpg')
+fundo_menu = pygame.transform.scale(fundo_menu, (largura_tela, altura_tela))
+titulo = pygame.image.load('titulo.png')
+titulo = pygame.transform.scale(titulo, (int(titulo.get_width() * 7.5), int(titulo.get_height() * 7.5)))
+botao_jogar = pygame.image.load('botaoplay-removebg-preview.png')
+botao_jogar = pygame.transform.scale(botao_jogar, (int(botao_jogar.get_width() * 0.9), int(botao_jogar.get_height() * 0.9)))
+botao_instrucoes = pygame.image.load('botaoinstrucoes-removebg-preview.png')
+botao_instrucoes = pygame.transform.scale(botao_instrucoes, (int(botao_instrucoes.get_width() * 0.9), int(botao_instrucoes.get_height() * 0.9)))
+tela_instrucoes_img = pygame.image.load('Telainstrucao.png')
+tela_instrucoes_img = pygame.transform.scale(tela_instrucoes_img, (largura_tela, altura_tela))
 
 # Posição e velocidade 
 personagem_rect = personagem.get_rect(center=(largura_tela // 4, altura_tela // 2))
@@ -74,8 +96,10 @@ def desenhar_obstaculos(obstaculos):
 def checar_colisao(obstaculos):
     for rect, oid in obstaculos:
         if personagem_rect.colliderect(rect):
+            som_colisao.play()
             return False
     if personagem_rect.top <= -100 or personagem_rect.bottom >= altura_tela:
+        som_colisao.play()
         return False
     return True
 
@@ -84,22 +108,25 @@ def desenhar_pontuacao(estado_jogo):
         texto_pontuacao = fonte.render(f'Pontos: {int(pontuacao)}', True, (255, 255, 255))
         pontuacao_rect = texto_pontuacao.get_rect(center=(largura_tela // 2, 50))
         tela.blit(texto_pontuacao, pontuacao_rect)
-        # Desenha vidas no canto superior esquerdo
-        try:
-            texto_vidas = fonte_pequena.render(f'VIDAS: {vidas}', True, (255, 255, 255))
-            vidas_rect = texto_vidas.get_rect(topleft=(10, 10))
-            tela.blit(texto_vidas, vidas_rect)
-        except Exception:
-            pass
     elif estado_jogo == 'fim_de_jogo':
         texto_pontuacao = fonte.render(f'Pontos: {int(pontuacao)}', True, (255, 255, 255))
         pontuacao_rect = texto_pontuacao.get_rect(center=(largura_tela // 2, 50))
         tela.blit(texto_pontuacao, pontuacao_rect)
 
+def desenhar_vidas():
+    texto_vidas = fonte_pequena.render(f'VIDAS: {vidas}', True, (255, 0, 0))
+    tela.blit(texto_vidas, (10, 10))
+
+def desenhar_pausa():
+    texto_pausa = fonte.render('Pressione Espaço para continuar', True, (255, 255, 255))
+    pausa_rect = texto_pausa.get_rect(center=(largura_tela // 2, altura_tela // 2 + 100))
+    tela.blit(texto_pausa, pausa_rect)
+
 # Variáveis de estado do jogo
 jogo_ativo = True
 pontuacao = 0
 vidas = 3
+pausa = False
 fonte = pygame.font.Font(None, 50)
 fonte_pequena = pygame.font.Font(None, 35)
 # removido o uso de obstaculo_index (não confiável). Usamos um set para marcar obstáculos já pontuados.
@@ -112,7 +139,7 @@ cor_ativa = pygame.Color('dodgerblue2')
 cor_inativa = pygame.Color('lightskyblue3')
 cor = cor_inativa
 
-def tela_placar():
+def desenhar_placar():
     tela.blit(fundo, (0, 0))
     try:
         with open('placar.txt', 'r') as f:
@@ -130,21 +157,11 @@ def tela_placar():
         placar_rect = texto_placar.get_rect(center=(largura_tela // 2, 100 + i * 40))
         tela.blit(texto_placar, placar_rect)
 
-    texto_instrucao = fonte_pequena.render('Pressione Espaço para iniciar', True, (255, 255, 255))
+    texto_instrucao = fonte_pequena.render('Pressione Espaço para voltar ao menu', True, (255, 255, 255))
     instrucao_rect = texto_instrucao.get_rect(center=(largura_tela // 2, altura_tela - 50))
     tela.blit(texto_instrucao, instrucao_rect)
-    pygame.display.flip()
 
-    esperando = True
-    while esperando:
-        for evento in pygame.event.get():
-            if evento.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-            if evento.type == pygame.KEYDOWN and evento.key == pygame.K_SPACE:
-                esperando = False
-
-def tela_fim_de_jogo():
+def desenhar_fim_de_jogo():
     global nome_jogador, caixa_entrada_ativa, cor
     desenhar_pontuacao('fim_de_jogo')
     texto_instrucao = fonte_pequena.render('Digite seu nome e pressione Enter', True, (255, 255, 255))
@@ -157,16 +174,67 @@ def tela_fim_de_jogo():
     tela.blit(texto_entrada, (caixa_entrada.x + 5, caixa_entrada.y + 5))
     caixa_entrada.w = max(200, texto_entrada.get_width() + 10)
 
+def desenhar_menu():
+    tela.blit(fundo_menu, (0, 0))
+    titulo_rect = titulo.get_rect(center=(largura_tela // 2, altura_tela // 4))
+    tela.blit(titulo, titulo_rect)
+    botao_jogar_rect = botao_jogar.get_rect(center=(largura_tela // 2, altura_tela * 0.58))
+    botao_instrucoes_rect = botao_instrucoes.get_rect(center=(largura_tela // 2, altura_tela * 0.85))
+    tela.blit(botao_jogar, botao_jogar_rect)
+    tela.blit(botao_instrucoes, botao_instrucoes_rect)
+    return botao_jogar_rect, botao_instrucoes_rect
+
+def desenhar_instrucoes():
+    tela.blit(tela_instrucoes_img, (0, 0))
+    # Botão de voltar
+    texto_voltar = fonte_pequena.render('Pressione ESC para voltar', True, (255, 255, 255))
+    voltar_rect = texto_voltar.get_rect(center=(largura_tela // 2, altura_tela - 50))
+    pygame.draw.rect(tela, (0, 0, 0), (voltar_rect.x - 10, voltar_rect.y - 10, voltar_rect.width + 20, voltar_rect.height + 20))
+    tela.blit(texto_voltar, voltar_rect)
+
+# Game state setup
+game_state = 'menu'
+botao_jogar_rect, botao_instrucoes_rect = None, None
 
 # Loop principal do jogo
-tela_placar()
 while True:
+    # Eventos
     for evento in pygame.event.get():
         if evento.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
 
-        if not jogo_ativo:
+        # Manipulação de eventos por estado
+        if game_state == 'menu':
+            if evento.type == pygame.MOUSEBUTTONDOWN:
+                if botao_jogar_rect and botao_jogar_rect.collidepoint(evento.pos):
+                    lista_obstaculos.clear()
+                    scored_obstaculos.clear()
+                    next_obstaculo_id = 0
+                    personagem_rect.center = (largura_tela // 4, altura_tela // 2)
+                    velocidade_y = 0
+                    pontuacao = 0
+                    vidas = 3
+                    pausa = True
+                    game_state = 'jogando'
+                elif botao_instrucoes_rect and botao_instrucoes_rect.collidepoint(evento.pos):
+                    game_state = 'instrucoes'
+        
+        elif game_state == 'instrucoes':
+            if evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
+                game_state = 'menu'
+
+        elif game_state == 'jogando':
+            if evento.type == pygame.KEYDOWN and evento.key == pygame.K_SPACE:
+                if not pausa:
+                    velocidade_y = pulo
+                    som_pulo.play()
+                else:
+                    pausa = False
+            if evento.type == SPAWNOBSTACLE:
+                lista_obstaculos.extend(criar_obstaculo())
+
+        elif game_state == 'fim_de_jogo':
             if evento.type == pygame.MOUSEBUTTONDOWN:
                 if caixa_entrada.collidepoint(evento.pos):
                     caixa_entrada_ativa = not caixa_entrada_ativa
@@ -179,80 +247,76 @@ while True:
                         with open('placar.txt', 'a') as f:
                             f.write(f'{nome_jogador}:{int(pontuacao)}\n')
                         nome_jogador = ''
-                        jogo_ativo = False # Para ir para a tela de placar
-                        tela_placar()
-                        # Resetar o estado do jogo para a próxima rodada
-                        lista_obstaculos.clear()
-                        scored_obstaculos.clear()
-                        next_obstaculo_id = 0
-                        personagem_rect.center = (largura_tela // 4, altura_tela // 2)
-                        velocidade_y = 0
-                        pontuacao = 0
-                        jogo_ativo = True # Começa o jogo novamente
+                        game_state = 'placar'
                     elif evento.key == pygame.K_BACKSPACE:
                         nome_jogador = nome_jogador[:-1]
                     else:
                         nome_jogador += evento.unicode
-        else:
-            if evento.type == pygame.KEYDOWN:
-                if evento.key == pygame.K_SPACE:
-                    velocidade_y = pulo
-            if evento.type == SPAWNOBSTACLE:
-                lista_obstaculos.extend(criar_obstaculo())
 
-    # Desenha o fundo
-    tela.blit(fundo, (0, 0))
+        elif game_state == 'placar':
+            if evento.type == pygame.KEYDOWN and evento.key == pygame.K_SPACE:
+                game_state = 'menu'
 
-    if jogo_ativo:
-        # Lógica do jogador
-        velocidade_y += gravidade
-        personagem_rect.y += int(velocidade_y)
+    # Lógica e renderização por estado
+    if game_state == 'menu':
+        botao_jogar_rect, botao_instrucoes_rect = desenhar_menu()
 
-        # Checa colisão manualmente para implementar sistema de vidas
-        colidiu = False
-        for rect, oid in lista_obstaculos:
-            if personagem_rect.colliderect(rect):
-                colidiu = True
-                break
-        if personagem_rect.top <= -100 or personagem_rect.bottom >= altura_tela:
-            colidiu = True
+    elif game_state == 'instrucoes':
+        desenhar_instrucoes()
 
-        if colidiu:
-            vidas -= 1
-            # Se ainda tiver vidas, reseta a posição e obstáculos mas mantém a pontuação
-            if vidas > 0:
-                personagem_rect.center = (largura_tela // 4, altura_tela // 2)
-                velocidade_y = 0
-                lista_obstaculos.clear()
-                scored_obstaculos.clear()
-                next_obstaculo_id = 0
-                # dá um pequeno delay para o jogador se preparar (opcional)
-                pygame.time.delay(300)
-            else:
-                # sem vidas -> fim de jogo
-                jogo_ativo = False
-
-        # Lógica dos obstáculos
-        lista_obstaculos = mover_obstaculos(lista_obstaculos)
+    elif game_state == 'jogando':
+        tela.blit(fundo, (0, 0))
+        
+        if not pausa:
+            velocidade_y += gravidade
+            personagem_rect.y += int(velocidade_y)
+            
+            if not checar_colisao(lista_obstaculos):
+                vidas -= 1
+                if vidas > 0:
+                    # Volta ao início mas mantém a pontuação
+                    lista_obstaculos.clear()
+                    scored_obstaculos.clear()
+                    next_obstaculo_id = 0
+                    personagem_rect.center = (largura_tela // 4, altura_tela // 2)
+                    velocidade_y = 0
+                    pausa = True
+                else:
+                    # Jogo termina
+                    game_state = 'fim_de_jogo'
+                    caixa_entrada_ativa = False
+                    cor = cor_inativa
+            
+            lista_obstaculos = mover_obstaculos(lista_obstaculos)
+        
         desenhar_obstaculos(lista_obstaculos)
 
-        # Lógica da pontuação: conta apenas o obstáculo "inferior" (bottom >= altura_tela)
-        for rect, oid in lista_obstaculos:
-            if rect.bottom >= altura_tela and rect.centerx < personagem_rect.left:
-                if oid not in scored_obstaculos:
-                    pontuacao += 1
-                    scored_obstaculos.add(oid)
+        if not pausa:
+            for rect, oid in lista_obstaculos:
+                if rect.bottom >= altura_tela and rect.centerx < personagem_rect.left:
+                    if oid not in scored_obstaculos:
+                        pontuacao += 1
+                        scored_obstaculos.add(oid)
+                        # Aumenta velocidade a cada 15 pontos
+                        if int(pontuacao) % 15 == 0:
+                            velocidade_obstaculo += 1
 
         desenhar_pontuacao('jogando')
-    else:
-        tela_fim_de_jogo()
-
-    # Desenha o personagem
-    if jogo_ativo:
+        desenhar_vidas()
         tela.blit(personagem, personagem_rect)
+        
+        if pausa:
+            desenhar_pausa()
+
+    elif game_state == 'fim_de_jogo':
+        tela.blit(fundo, (0, 0))
+        desenhar_obstaculos(lista_obstaculos)
+        tela.blit(personagem, personagem_rect)
+        desenhar_fim_de_jogo()
+
+    elif game_state == 'placar':
+        desenhar_placar()
 
     # Atualiza a tela
     pygame.display.flip()
-
-    # Controla a taxa de quadros
     relogio.tick(60)
