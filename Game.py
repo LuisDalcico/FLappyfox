@@ -84,6 +84,13 @@ def desenhar_pontuacao(estado_jogo):
         texto_pontuacao = fonte.render(f'Pontos: {int(pontuacao)}', True, (255, 255, 255))
         pontuacao_rect = texto_pontuacao.get_rect(center=(largura_tela // 2, 50))
         tela.blit(texto_pontuacao, pontuacao_rect)
+        # Desenha vidas no canto superior esquerdo
+        try:
+            texto_vidas = fonte_pequena.render(f'VIDAS: {vidas}', True, (255, 255, 255))
+            vidas_rect = texto_vidas.get_rect(topleft=(10, 10))
+            tela.blit(texto_vidas, vidas_rect)
+        except Exception:
+            pass
     elif estado_jogo == 'fim_de_jogo':
         texto_pontuacao = fonte.render(f'Pontos: {int(pontuacao)}', True, (255, 255, 255))
         pontuacao_rect = texto_pontuacao.get_rect(center=(largura_tela // 2, 50))
@@ -92,6 +99,7 @@ def desenhar_pontuacao(estado_jogo):
 # Variáveis de estado do jogo
 jogo_ativo = True
 pontuacao = 0
+vidas = 3
 fonte = pygame.font.Font(None, 50)
 fonte_pequena = pygame.font.Font(None, 35)
 # removido o uso de obstaculo_index (não confiável). Usamos um set para marcar obstáculos já pontuados.
@@ -199,7 +207,30 @@ while True:
         # Lógica do jogador
         velocidade_y += gravidade
         personagem_rect.y += int(velocidade_y)
-        jogo_ativo = checar_colisao(lista_obstaculos)
+
+        # Checa colisão manualmente para implementar sistema de vidas
+        colidiu = False
+        for rect, oid in lista_obstaculos:
+            if personagem_rect.colliderect(rect):
+                colidiu = True
+                break
+        if personagem_rect.top <= -100 or personagem_rect.bottom >= altura_tela:
+            colidiu = True
+
+        if colidiu:
+            vidas -= 1
+            # Se ainda tiver vidas, reseta a posição e obstáculos mas mantém a pontuação
+            if vidas > 0:
+                personagem_rect.center = (largura_tela // 4, altura_tela // 2)
+                velocidade_y = 0
+                lista_obstaculos.clear()
+                scored_obstaculos.clear()
+                next_obstaculo_id = 0
+                # dá um pequeno delay para o jogador se preparar (opcional)
+                pygame.time.delay(300)
+            else:
+                # sem vidas -> fim de jogo
+                jogo_ativo = False
 
         # Lógica dos obstáculos
         lista_obstaculos = mover_obstaculos(lista_obstaculos)
