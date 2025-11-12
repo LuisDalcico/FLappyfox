@@ -11,7 +11,6 @@ som_pulo = pygame.mixer.Sound('pulo.mp3')
 som_colisao = pygame.mixer.Sound('tronco.mp3')
 musica_fundo = 'musica fundo.mp3'
 pygame.mixer.music.load(musica_fundo)
-pygame.mixer.music.set_volume(0.5)
 pygame.mixer.music.play(-1)
 
 
@@ -51,6 +50,11 @@ botao_jogar = pygame.image.load('botaoplay-removebg-preview.png')
 botao_jogar = pygame.transform.scale(botao_jogar, (int(botao_jogar.get_width() * 0.9), int(botao_jogar.get_height() * 0.9)))
 botao_instrucoes = pygame.image.load('botaoinstrucoes-removebg-preview.png')
 botao_instrucoes = pygame.transform.scale(botao_instrucoes, (int(botao_instrucoes.get_width() * 0.9), int(botao_instrucoes.get_height() * 0.9)))
+# Coração (power-up de vida)
+coracao = pygame.image.load('coracao.png')
+# ajustar o tamanho do coração para ficar um pouco menor que o personagem
+pw2, ph2 = personagem.get_size()
+coracao = pygame.transform.scale(coracao, (int(pw2 * 0.8), int(ph2 * 0.8)))
 tela_instrucoes_img = pygame.image.load('Telainstrucao.png')
 tela_instrucoes_img = pygame.transform.scale(tela_instrucoes_img, (largura_tela, altura_tela))
 
@@ -63,7 +67,10 @@ pulo = -10
 # Obstaculos
 lista_obstaculos = []
 SPAWNOBSTACLE = pygame.USEREVENT
+SPAWNHEART = pygame.USEREVENT + 1
 pygame.time.set_timer(SPAWNOBSTACLE, 1200)
+# tenta spawnear um coração a cada 10s (checa condição interna)
+pygame.time.set_timer(SPAWNHEART, 10000)
 velocidade_obstaculo = 5
 
 def criar_obstaculo():
@@ -138,6 +145,9 @@ caixa_entrada = pygame.Rect(largura_tela // 2 - 100, altura_tela // 2, 200, 50)
 cor_ativa = pygame.Color('dodgerblue2')
 cor_inativa = pygame.Color('lightskyblue3')
 cor = cor_inativa
+# Estado do coração (power-up)
+heart_active = False
+heart_rect = None
 
 def desenhar_placar():
     tela.blit(fundo, (0, 0))
@@ -233,6 +243,13 @@ while True:
                     pausa = False
             if evento.type == SPAWNOBSTACLE:
                 lista_obstaculos.extend(criar_obstaculo())
+            # só spawna coração se tiver 2 ou menos vidas e não houver coração ativo
+            if evento.type == SPAWNHEART and not heart_active and vidas <= 2:
+                # spawn do coração em posição aleatória na tela (margens de 80 px)
+                hx = random.randint(80, largura_tela - 80)
+                hy = random.randint(80, altura_tela - 80)
+                heart_rect = coracao.get_rect(center=(hx, hy))
+                heart_active = True
 
         elif game_state == 'fim_de_jogo':
             if evento.type == pygame.MOUSEBUTTONDOWN:
@@ -288,8 +305,23 @@ while True:
                     cor = cor_inativa
             
             lista_obstaculos = mover_obstaculos(lista_obstaculos)
+            # Move heart junto com os obstáculos quando ativo
+            if heart_active and heart_rect is not None:
+                heart_rect.centerx -= int(velocidade_obstaculo)
+                # remove se saiu da tela
+                if heart_rect.right < 0:
+                    heart_active = False
+                    heart_rect = None
         
         desenhar_obstaculos(lista_obstaculos)
+
+        # Desenha power-up de vida (coração) e checa colisão
+        if heart_active and heart_rect is not None:
+            tela.blit(coracao, heart_rect)
+            if not pausa and personagem_rect.colliderect(heart_rect):
+                # aumenta vida mas limita a 3
+                vidas = min(vidas + 1, 3)
+                heart_active = False
 
         if not pausa:
             for rect, oid in lista_obstaculos:
