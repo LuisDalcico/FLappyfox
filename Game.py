@@ -157,9 +157,15 @@ def desenhar_placar():
     tela.blit(fundo, (0, 0))
     try:
         with open('placar.txt', 'r') as f:
-            placar = [linha.strip().split(':') for linha in f]
+            placar = []
+            for linha in f:
+                linha = linha.strip()
+                if linha and ':' in linha:  # verifica se a linha não está vazia e contém ':'
+                    parts = linha.split(':')
+                    if len(parts) == 2:  # verifica se tem exatamente nome e pontos
+                        placar.append(parts)
             placar = sorted(placar, key=lambda x: int(x[1]), reverse=True)
-    except (FileNotFoundError, IndexError):
+    except (FileNotFoundError, ValueError):
         placar = []
 
     texto_titulo = fonte.render('Placar', True, (255, 255, 255))
