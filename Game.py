@@ -77,7 +77,7 @@ pygame.time.set_timer(SPAWNOBSTACLE, 1200)
 pygame.time.set_timer(SPAWNHEART, 10000)
 velocidade_obstaculo = 5
 
-def criar_obstaculo():
+def criar_obstaculo(): # Define a função que cria um novo par de obstáculos (cima e baixo).
     global next_obstaculo_id
     # posição aleatoria
     altura_aleatoria = random.randint(int(altura_tela * 0.45), int(altura_tela * 0.85))
@@ -90,7 +90,7 @@ def criar_obstaculo():
     next_obstaculo_id += 2
     return (obstaculo_baixo, id_baixo), (obstaculo_cima, id_cima)
 
-def mover_obstaculos(obstaculos):
+def mover_obstaculos(obstaculos): # Define a função que atualiza a posição dos obstáculos.
     for rect, oid in obstaculos:
         rect.centerx -= velocidade_obstaculo
     # remove quando completamente fora da tela
@@ -357,7 +357,7 @@ while True:
         if pausa:
             desenhar_pausa()
 
-    elif game_state == 'fim_de_jogo':
+    elif game_state == 'fim_de_jogo': # Logica de renderizaçao se perder.
         tela.blit(fundo, (0, 0))
         desenhar_obstaculos(lista_obstaculos)
         tela.blit(personagem, personagem_rect)
