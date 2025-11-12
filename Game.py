@@ -9,6 +9,10 @@ pygame.mixer.init()
 # Carregando sons
 som_pulo = pygame.mixer.Sound('pulo.mp3')
 som_colisao = pygame.mixer.Sound('tronco.mp3')
+try:
+    som_coracao = pygame.mixer.Sound('somcoracao.mp3')
+except Exception:
+    som_coracao = None
 musica_fundo = 'musica fundo.mp3'
 pygame.mixer.music.load(musica_fundo)
 pygame.mixer.music.play(-1)
@@ -245,10 +249,10 @@ while True:
                 lista_obstaculos.extend(criar_obstaculo())
             # só spawna coração se tiver 2 ou menos vidas e não houver coração ativo
             if evento.type == SPAWNHEART and not heart_active and vidas <= 2:
-                # spawn do coração em posição aleatória na tela (margens de 80 px)
-                hx = random.randint(80, largura_tela - 80)
+                # spawn do coração na frente (direita) do personagem, vindo da borda direita
+                hx = largura_tela + 100
                 hy = random.randint(80, altura_tela - 80)
-                heart_rect = coracao.get_rect(center=(hx, hy))
+                heart_rect = coracao.get_rect(midleft=(hx, hy))
                 heart_active = True
 
         elif game_state == 'fim_de_jogo':
@@ -321,7 +325,14 @@ while True:
             if not pausa and personagem_rect.colliderect(heart_rect):
                 # aumenta vida mas limita a 3
                 vidas = min(vidas + 1, 3)
+                # toca som de coleta se disponível
+                if som_coracao:
+                    try:
+                        som_coracao.play()
+                    except Exception:
+                        pass
                 heart_active = False
+                heart_rect = None
 
         if not pausa:
             for rect, oid in lista_obstaculos:
